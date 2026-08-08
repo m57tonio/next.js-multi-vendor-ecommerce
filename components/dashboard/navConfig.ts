@@ -124,6 +124,16 @@ export const adminNav: SellerNavSection[] = [
           { label: "Customer List", href: "/admin/customers" },
         ],
       },
+      {
+        label: "Report Manage",
+        icon: "chart",
+        children: [
+          { label: "Earnings Report", href: "/admin/reports/earnings" },
+          { label: "Product Report", href: "/admin/reports/products" },
+          { label: "Product Stock Report", href: "/admin/reports/stock" },
+          { label: "Order Report", href: "/admin/reports/orders" },
+        ],
+      },
     ],
   },
 ];

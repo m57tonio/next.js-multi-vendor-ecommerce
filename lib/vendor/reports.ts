@@ -114,8 +114,9 @@ function unitFor(preset: ReportPreset): BucketUnit {
 const MONTH_FMT = new Intl.DateTimeFormat("en-US", { month: "short" });
 const WEEKDAY_FMT = new Intl.DateTimeFormat("en-US", { weekday: "short" });
 
-/** Bucket labels spanning the FULL period [from, to). */
-function bucketLabels(range: ReportRange): string[] {
+/** Bucket labels spanning the FULL period [from, to). Exported for reuse by the
+ *  platform-wide admin reports (lib/admin/reports.ts). */
+export function bucketLabels(range: ReportRange): string[] {
   const unit = unitFor(range.preset);
   const labels: string[] = [];
   if (unit === "hour") {
@@ -143,7 +144,7 @@ function bucketLabels(range: ReportRange): string[] {
 }
 
 /** Which bucket a timestamp falls into, or -1 if outside the period. */
-function bucketIndex(range: ReportRange, at: Date, bucketCount: number): number {
+export function bucketIndex(range: ReportRange, at: Date, bucketCount: number): number {
   const unit = unitFor(range.preset);
   let idx: number;
   if (unit === "hour") {
