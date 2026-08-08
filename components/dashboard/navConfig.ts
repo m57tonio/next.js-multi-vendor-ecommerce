@@ -58,6 +58,7 @@ export const vendorNav: SellerNavSection[] = [
           { label: "Order Report", href: "/vendor/reports/orders" },
         ],
       },
+      { label: "Chat Box", href: "/vendor/chat", icon: "chat" },
       { label: "POS", href: "#", icon: "pos" },
     ],
   },

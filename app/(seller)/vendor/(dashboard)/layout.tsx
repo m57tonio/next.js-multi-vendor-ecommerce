@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { requireRole } from "@/lib/guard";
 import { prisma } from "@/lib/prisma";
 import { SellerShell } from "@/components/dashboard/SellerShell";
+import { getChatUnreadTotal } from "@/lib/chat/actions";
 
 // Persistent shell for the APPROVED vendor dashboard. Renders the header +
 // sidebar ONCE; child pages (dashboard, profile, …) swap only the main content.
@@ -16,10 +17,12 @@ export default async function VendorDashboardLayout({
   const user = session.user;
   if (user.vendorStatus !== "APPROVED") redirect("/vendor/pending");
 
-  // Pending sub-orders needing this vendor's action → the "Order Manage" badge.
-  const pendingOrders = await prisma.subOrder.count({
-    where: { vendor: { userId: user.id }, status: "PENDING" },
-  });
+  // Pending sub-orders needing this vendor's action → the "Order Manage" badge;
+  // unread customer messages → the "Chat Box" badge.
+  const [pendingOrders, chatUnread] = await Promise.all([
+    prisma.subOrder.count({ where: { vendor: { userId: user.id }, status: "PENDING" } }),
+    getChatUnreadTotal(),
+  ]);
 
   return (
     <SellerShell
@@ -31,7 +34,7 @@ export default async function VendorDashboardLayout({
       notifCount={1}
       profileHref="/vendor/profile"
       changePasswordHref="/vendor/change-password"
-      badges={{ "Order Manage": pendingOrders }}
+      badges={{ "Order Manage": pendingOrders, "Chat Box": chatUnread }}
     >
       {children}
     </SellerShell>

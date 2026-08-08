@@ -19,7 +19,7 @@ const NAV_ITEMS: NavItem[] = [
   { label: "Wish List", icon: "heartLine", href: "/dashboard/wishlist" },
   { label: "My Wallet", icon: "wallet" },
   { label: "My Loyalty Point", icon: "award" },
-  { label: "Inbox", icon: "mail" },
+  { label: "Inbox", icon: "mail", href: "/dashboard/inbox" },
   { label: "My Address", icon: "pin" },
   { label: "Support Ticket", icon: "life" },
   { label: "Refer & Earn", icon: "share" },
@@ -34,10 +34,13 @@ export function AccountSidebar({
   name,
   email,
   image,
+  inboxUnread = 0,
 }: {
   name: string;
   email: string;
   image?: string | null;
+  /** Unread chat total → badge on the Inbox item. */
+  inboxUnread?: number;
 }) {
   const pathname = usePathname();
 
@@ -81,6 +84,11 @@ export function AccountSidebar({
                 <Icon name={n.icon} size={17} />
               </span>
               <span className="flex-1">{n.label}</span>
+              {n.label === "Inbox" && inboxUnread > 0 && (
+                <span className="flex h-[22px] min-w-[22px] items-center justify-center rounded-full bg-iris-100 px-1.5 font-sans text-[11px] font-bold text-iris-700">
+                  {inboxUnread}
+                </span>
+              )}
             </>
           );
 

@@ -268,19 +268,27 @@ export function SellerShell({
 
                   // ── Leaf link ──
                   const active = item.href ? isActive(item.href) : false;
+                  const leafBadge = badges?.[item.label] ?? 0;
                   return (
                     <Link
                       key={item.label}
                       href={item.href ?? "#"}
                       aria-current={active ? "page" : undefined}
-                      className={`flex items-center gap-2.5 rounded-md px-3 py-2.5 font-sans text-[13.5px] transition-colors ${
+                      className={`flex items-center justify-between gap-2.5 rounded-md px-3 py-2.5 font-sans text-[13.5px] transition-colors ${
                         active
                           ? "bg-iris-50 font-semibold text-iris-500"
                           : "font-medium text-ink-soft hover:bg-field"
                       }`}
                     >
-                      <Icon name={item.icon} size={17} />
-                      {item.label}
+                      <span className="flex items-center gap-2.5">
+                        <Icon name={item.icon} size={17} />
+                        {item.label}
+                      </span>
+                      {leafBadge > 0 && (
+                        <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-iris-100 px-1.5 font-sans text-[11px] font-semibold text-accent-fg">
+                          {leafBadge}
+                        </span>
+                      )}
                     </Link>
                   );
                 })}

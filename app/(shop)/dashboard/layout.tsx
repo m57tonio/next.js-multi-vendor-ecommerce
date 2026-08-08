@@ -3,6 +3,7 @@ import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { Icon, type IconName } from "@/components/dashboard/Icon";
 import { AccountSidebar } from "@/components/dashboard/AccountSidebar";
+import { getChatUnreadTotal } from "@/lib/chat/actions";
 
 // Read the signed-in customer per request for the sidebar identity block.
 export const dynamic = "force-dynamic";
@@ -22,12 +23,15 @@ export default async function DashboardLayout({
   // Middleware already guarantees a signed-in CUSTOMER here; we only read the
   // identity fields for the sidebar. Scoped to the session user id.
   const session = await auth();
-  const user = session?.user?.id
-    ? await prisma.user.findUnique({
-        where: { id: session.user.id },
-        select: { name: true, email: true },
-      })
-    : null;
+  const [user, inboxUnread] = await Promise.all([
+    session?.user?.id
+      ? prisma.user.findUnique({
+          where: { id: session.user.id },
+          select: { name: true, email: true },
+        })
+      : null,
+    getChatUnreadTotal(),
+  ]);
 
   return (
     <>
@@ -42,7 +46,11 @@ export default async function DashboardLayout({
 
       {/* Sidebar + content card */}
       <div className="mx-auto grid max-w-[var(--container-max)] grid-cols-1 items-start gap-6 px-[var(--cpad)] pt-5 lg:grid-cols-[300px_1fr]">
-        <AccountSidebar name={user?.name ?? "Your account"} email={user?.email ?? ""} />
+        <AccountSidebar
+          name={user?.name ?? "Your account"}
+          email={user?.email ?? ""}
+          inboxUnread={inboxUnread}
+        />
 
         <section className="min-h-[640px] rounded-2xl border border-line-soft bg-surface p-6 shadow-[0_1px_2px_rgba(20,18,31,0.05)] sm:p-8 lg:px-9">
           {children}
