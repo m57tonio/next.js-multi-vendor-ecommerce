@@ -83,7 +83,9 @@ export default async function ProductPage({ params }: { params: Params }) {
         {/* Seller sidebar */}
         <aside className="flex flex-col gap-5 lg:sticky lg:top-[100px]">
           <ProductAssurances />
-          {vendor && <VendorCard vendor={vendor} />}
+          {vendor && (
+            <VendorCard vendor={vendor} productId={product.id} backTo={`/products/${product.slug}`} />
+          )}
         </aside>
       </div>
 

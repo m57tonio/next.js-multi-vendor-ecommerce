@@ -23,8 +23,12 @@ functional Next.js application must do so those screens become a working product
 - Reproduce the mockups exactly using the design tokens — premium, 2026, not template.
 
 ### Non-goals (explicitly out of scope)
-Auctions · Publication House / Authors / Creators · chat-with-vendor (replaced by an **AI
-support agent**) · Google Maps address picker · currency / language switchers.
+Auctions · Publication House / Authors / Creators · Google Maps address picker · currency /
+language switchers.
+
+> **Update:** direct **user↔vendor chat is now IN scope** and being built (customer inbox +
+> vendor chat box, one conversation per customer–vendor pair, polling-based realtime). It is
+> no longer replaced by the AI support agent; the AI agent remains a separate, future item.
 
 **Payments:** **Cash on Delivery (COD) is supported in v1**; Stripe (card + wallet) is
 added later. The order model is payment-method-agnostic (`paymentMethod: COD | STRIPE`).

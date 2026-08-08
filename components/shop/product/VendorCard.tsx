@@ -1,13 +1,23 @@
 import Link from "next/link";
 import { Icon } from "@/components/dashboard/Icon";
 import type { VendorSummary } from "@/lib/shop/queries";
+import { startConversationWithVendor } from "@/app/(shop)/chat-actions";
 
 /**
  * Seller card for the product detail sidebar: store logo, name, honest rating,
- * product count, and a "Visit Store" link (→ /sellers/[slug], link only until
- * the store page is built). Review count is 0 until a Review model exists.
+ * product count, "Visit Store", and "Chat with Vendor" (opens/reopens the
+ * customer↔vendor conversation via a server action).
  */
-export function VendorCard({ vendor }: { vendor: VendorSummary }) {
+export function VendorCard({
+  vendor,
+  productId,
+  backTo,
+}: {
+  vendor: VendorSummary;
+  productId: string;
+  /** In-app path to return to after login when a logged-out shopper starts a chat. */
+  backTo: string;
+}) {
   return (
     <div className="rounded-[18px] border border-line-soft bg-surface p-[22px] shadow-[0_1px_2px_rgba(20,18,31,0.05)]">
       <div className="mb-4 flex items-center gap-3.5">
@@ -53,6 +63,19 @@ export function VendorCard({ vendor }: { vendor: VendorSummary }) {
         <Icon name="store" size={18} strokeWidth={2} />
         Visit Store
       </Link>
+
+      <form action={startConversationWithVendor}>
+        <input type="hidden" name="vendorId" value={vendor.id} />
+        <input type="hidden" name="productId" value={productId} />
+        <input type="hidden" name="backTo" value={backTo} />
+        <button
+          type="submit"
+          className="mt-2.5 flex h-12 w-full items-center justify-center gap-2 rounded-xl border border-iris-200 bg-iris-50 font-display text-[13.5px] font-bold text-iris-600 transition-colors hover:bg-iris-100"
+        >
+          <Icon name="chat" size={18} strokeWidth={2} />
+          Chat with Vendor
+        </button>
+      </form>
     </div>
   );
 }
