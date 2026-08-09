@@ -404,9 +404,12 @@ export async function placeOrder(input: unknown): Promise<PlaceOrderResult> {
             // SERVER-computed total in integer cents — NEVER a client-provided number.
             amount: totals.grandTotalCents,
             currency: "usd",
-            // Card only — this is the "Card (Stripe)" method. Explicit (not
-            // automatic_payment_methods) so it works without dashboard method config.
-            payment_method_types: ["card"],
+            // Canonical deferred-PaymentElement flow: automatic_payment_methods is
+            // what the client-side stripe.confirmPayment({elements}) handshake expects.
+            // Requires "Cards" to be enabled in the Stripe Dashboard → Settings →
+            // Payment methods (test mode). If it isn't, PI creation throws here and
+            // the shopper sees "We couldn't start the card payment."
+            automatic_payment_methods: { enabled: true },
             metadata: { orderId: order.id, orderNumber: order.orderNumber },
             description: `Covet order ${order.orderNumber}`,
             receipt_email: data.shipping.email,

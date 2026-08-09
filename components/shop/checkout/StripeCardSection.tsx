@@ -47,10 +47,12 @@ export function StripeCardSection({ amountCents, ...checkout }: { amountCents: n
   const [error, setError] = useState<string | null>(null);
 
   const options: StripeElementsOptions = {
+    // Deferred mode — collect the card before the PaymentIntent exists. No explicit
+    // paymentMethodTypes: the Element auto-detects to match the PaymentIntent's
+    // automatic_payment_methods, which the confirmPayment handshake requires.
     mode: "payment",
     amount: Math.max(amountCents, 1),
     currency: "usd",
-    paymentMethodTypes: ["card"],
     appearance,
   };
 

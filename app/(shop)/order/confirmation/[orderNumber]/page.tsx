@@ -4,6 +4,7 @@ import { auth } from "@/auth";
 import { Icon } from "@/components/dashboard/Icon";
 import { formatMoney } from "@/lib/shop/pricing";
 import { getConfirmationOrder } from "@/lib/shop/order";
+import { syncStripeOrderPayment } from "@/lib/stripe/finalize";
 import { ClearCart } from "./ClearCart";
 import { ConfirmationActions } from "./ConfirmationActions";
 import { PaymentStatusBlock } from "./PaymentStatusBlock";
@@ -39,6 +40,12 @@ export default async function OrderConfirmationPage({
   if (!session?.user?.id) {
     redirect(`/login?next=/order/confirmation/${orderNumber}`);
   }
+
+  // Server-side payment verification: for a Stripe order still UNPAID, re-check the
+  // PaymentIntent directly with Stripe (secret key — never the browser) and flip to
+  // PAID if it succeeded. Runs before the read so the page shows the true status even
+  // without a delivered webhook. Idempotent + customer-scoped.
+  await syncStripeOrderPayment(orderNumber, session.user.id);
 
   const order = await getConfirmationOrder(orderNumber, session.user.id);
   if (!order) notFound();
