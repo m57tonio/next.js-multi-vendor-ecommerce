@@ -6,6 +6,7 @@ import { formatMoney } from "@/lib/shop/pricing";
 import { getConfirmationOrder } from "@/lib/shop/order";
 import { ClearCart } from "./ClearCart";
 import { ConfirmationActions } from "./ConfirmationActions";
+import { PaymentStatusBlock } from "./PaymentStatusBlock";
 
 // The order is read per-request and scoped to the signed-in customer.
 export const dynamic = "force-dynamic";
@@ -237,15 +238,11 @@ export default async function OrderConfirmationPage({
               </span>
             </div>
 
-            <div className="flex items-center justify-between rounded-xl bg-field px-4 py-3">
-              <span className="flex items-center gap-2 font-sans text-[13px] font-medium text-ink-soft">
-                <Icon name="cash" size={16} strokeWidth={1.9} className="text-iris-500" />
-                Cash on Delivery
-              </span>
-              <span className="rounded-full bg-warning-bg px-2.5 py-1 font-sans text-[11px] font-semibold text-warning">
-                Unpaid
-              </span>
-            </div>
+            <PaymentStatusBlock
+              orderNumber={order.orderNumber}
+              method={order.paymentMethod}
+              initialStatus={order.paymentStatus}
+            />
           </div>
 
           {/* Shipping details */}

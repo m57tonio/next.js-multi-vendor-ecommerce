@@ -1,17 +1,27 @@
 "use client";
 
-import { Icon } from "@/components/dashboard/Icon";
+import { Icon, type IconName } from "@/components/dashboard/Icon";
+import { StripeCardSection, type StripeCheckout } from "@/components/shop/checkout/StripeCardSection";
+
+export type PaymentMethod = "COD" | "STRIPE";
 
 /**
- * Payment step. v1 offers a single method — Cash on Delivery. The schema's
- * paymentMethod enum (COD | STRIPE) leaves a seam for a Stripe card option here
- * later; for now COD is the only, pre-selected method.
+ * Payment step. Two methods: Cash on Delivery (unchanged) and Card via Stripe.
+ * Selecting Card reveals the Stripe PaymentElement; the COD path is untouched.
  */
 export function PaymentStep({
+  method,
+  onMethodChange,
+  amountCents,
+  stripe,
   note,
   onNoteChange,
   onBack,
 }: {
+  method: PaymentMethod;
+  onMethodChange: (m: PaymentMethod) => void;
+  amountCents: number;
+  stripe: StripeCheckout;
   note: string;
   onNoteChange: (v: string) => void;
   onBack: () => void;
@@ -30,26 +40,34 @@ export function PaymentStep({
         </button>
       </div>
 
-      {/* COD — the only method for now (pre-selected). */}
-      <div className="flex items-center gap-3.5 rounded-xl border border-iris-500 bg-iris-50 p-4">
-        <span className="flex size-[18px] flex-none items-center justify-center rounded-full border-2 border-iris-500">
-          <span className="size-2 rounded-full bg-iris-500" />
-        </span>
-        <span className="flex size-10 flex-none items-center justify-center rounded-lg bg-surface text-iris-500">
-          <Icon name="cash" size={20} strokeWidth={1.9} />
-        </span>
-        <div className="flex-1">
-          <div className="font-sans text-sm font-semibold text-ink">Cash on Delivery</div>
-          <div className="mt-1 font-sans text-[12.5px] text-muted">
-            Pay in cash when your order is delivered to your doorstep.
-          </div>
-        </div>
+      <div className="flex flex-col gap-3">
+        {/* Cash on Delivery — unchanged behaviour, now a selectable option. */}
+        <MethodOption
+          selected={method === "COD"}
+          onSelect={() => onMethodChange("COD")}
+          icon="cash"
+          title="Cash on Delivery"
+          subtitle="Pay in cash when your order is delivered to your doorstep."
+        />
+
+        {/* Card via Stripe. */}
+        <MethodOption
+          selected={method === "STRIPE"}
+          onSelect={() => onMethodChange("STRIPE")}
+          icon="card"
+          title="Card (Stripe)"
+          subtitle="Pay securely with a credit or debit card."
+        />
       </div>
 
-      <div className="mt-3 flex items-center gap-2 font-sans text-[12.5px] leading-[1.5] text-muted">
-        <Icon name="alert" size={15} strokeWidth={2} className="flex-none text-warning" />
-        Please have the exact amount ready for the delivery agent.
-      </div>
+      {method === "COD" ? (
+        <div className="mt-3 flex items-center gap-2 font-sans text-[12.5px] leading-[1.5] text-muted">
+          <Icon name="alert" size={15} strokeWidth={2} className="flex-none text-warning" />
+          Please have the exact amount ready for the delivery agent.
+        </div>
+      ) : (
+        <StripeCardSection amountCents={amountCents} {...stripe} />
+      )}
 
       <div className="mt-6">
         <label className="mb-2 block font-sans text-[13px] font-medium text-ink-soft">
@@ -64,5 +82,50 @@ export function PaymentStep({
         />
       </div>
     </div>
+  );
+}
+
+function MethodOption({
+  selected,
+  onSelect,
+  icon,
+  title,
+  subtitle,
+}: {
+  selected: boolean;
+  onSelect: () => void;
+  icon: IconName;
+  title: string;
+  subtitle: string;
+}) {
+  return (
+    <button
+      type="button"
+      role="radio"
+      aria-checked={selected}
+      onClick={onSelect}
+      className={`flex w-full items-center gap-3.5 rounded-xl border p-4 text-left transition-colors ${
+        selected ? "border-iris-500 bg-iris-50" : "border-line hover:border-iris-300"
+      }`}
+    >
+      <span
+        className={`flex size-[18px] flex-none items-center justify-center rounded-full border-2 ${
+          selected ? "border-iris-500" : "border-line"
+        }`}
+      >
+        {selected && <span className="size-2 rounded-full bg-iris-500" />}
+      </span>
+      <span
+        className={`flex size-10 flex-none items-center justify-center rounded-lg bg-surface ${
+          selected ? "text-iris-500" : "text-muted"
+        }`}
+      >
+        <Icon name={icon} size={20} strokeWidth={1.9} />
+      </span>
+      <span className="flex-1">
+        <span className="block font-sans text-sm font-semibold text-ink">{title}</span>
+        <span className="mt-1 block font-sans text-[12.5px] text-muted">{subtitle}</span>
+      </span>
+    </button>
   );
 }

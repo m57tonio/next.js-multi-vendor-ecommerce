@@ -4,6 +4,7 @@ import { Prisma } from "@prisma/client";
 import { z } from "zod";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
+import { stripe } from "@/lib/stripe/server";
 import { validateCoupon, type CouponCartItem } from "@/lib/coupon-validate";
 import { computeCardPricing } from "@/lib/shop/pricing";
 import { computeTotals } from "@/lib/checkout/totals";
@@ -121,10 +122,13 @@ const placeOrderSchema = z.object({
   billingSame: z.boolean(),
   shippingMethod: z.enum(["standard", "express"]),
   note: z.string().max(1000).optional(),
+  // COD (default) keeps the exact v1 behaviour; STRIPE additionally creates a
+  // PaymentIntent for the server total and returns its client_secret.
+  paymentMethod: z.enum(["COD", "STRIPE"]).default("COD"),
 });
 
 export type PlaceOrderResult =
-  | { ok: true; orderId: string; orderNumber: string }
+  | { ok: true; orderId: string; orderNumber: string; clientSecret?: string }
   | { ok: false; error: string; code?: "AUTH" | "STOCK" | "EMPTY" | "VALIDATION" };
 
 /** Money helper: integer cents -> a Decimal(10,2) dollar value. */
@@ -351,7 +355,7 @@ export async function placeOrder(input: unknown): Promise<PlaceOrderResult> {
             shipping: cents(shippingCents),
             grandTotal: cents(totals.grandTotalCents),
             shippingMethod: data.shippingMethod,
-            paymentMethod: "COD",
+            paymentMethod: data.paymentMethod,
             paymentStatus: "UNPAID",
             status: "PENDING",
             note: data.note?.trim() || null,
@@ -389,6 +393,39 @@ export async function placeOrder(input: unknown): Promise<PlaceOrderResult> {
 
         return created;
       });
+
+      // STOCK POLICY: reserve-at-order — stock is decremented and coupon usedCount
+      // bumped in the transaction above, exactly like COD (both methods reserve at
+      // placement, not at payment). The order is UNPAID until the verified Stripe
+      // webhook (Part 4) flips it PAID; the webhook does NOT re-touch stock/coupons.
+      if (data.paymentMethod === "STRIPE") {
+        try {
+          const intent = await stripe.paymentIntents.create({
+            // SERVER-computed total in integer cents — NEVER a client-provided number.
+            amount: totals.grandTotalCents,
+            currency: "usd",
+            // Card only — this is the "Card (Stripe)" method. Explicit (not
+            // automatic_payment_methods) so it works without dashboard method config.
+            payment_method_types: ["card"],
+            metadata: { orderId: order.id, orderNumber: order.orderNumber },
+            description: `Covet order ${order.orderNumber}`,
+            receipt_email: data.shipping.email,
+          });
+          await prisma.order.update({
+            where: { id: order.id },
+            data: { stripePaymentIntentId: intent.id },
+          });
+          return {
+            ok: true,
+            orderId: order.id,
+            orderNumber: order.orderNumber,
+            clientSecret: intent.client_secret ?? undefined,
+          };
+        } catch (e) {
+          console.error("Stripe PaymentIntent create failed:", e);
+          return { ok: false, error: "We couldn't start the card payment. Please try again." };
+        }
+      }
 
       return { ok: true, orderId: order.id, orderNumber: order.orderNumber };
     } catch (e) {

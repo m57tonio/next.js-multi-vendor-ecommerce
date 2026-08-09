@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useSyncExternalStore } from "react";
+import { useCallback, useRef, useState, useSyncExternalStore } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
@@ -22,8 +22,9 @@ import { CheckoutStepper, type CheckoutStep } from "@/components/shop/checkout/C
 import { CartStep } from "@/components/shop/checkout/CartStep";
 import { CouponForm } from "@/components/shop/checkout/CouponForm";
 import { ShippingStep, type ShippingErrors } from "@/components/shop/checkout/ShippingStep";
-import { PaymentStep } from "@/components/shop/checkout/PaymentStep";
+import { PaymentStep, type PaymentMethod } from "@/components/shop/checkout/PaymentStep";
 import { OrderSummary } from "@/components/shop/checkout/OrderSummary";
+import { computeTotals } from "@/lib/checkout/totals";
 
 type ContactDefaults = { name?: string | null; email?: string | null; phone?: string | null };
 
@@ -46,11 +47,53 @@ export function CheckoutFlow({ defaultContact }: { defaultContact?: ContactDefau
   const [note, setNote] = useState("");
   const [agreedTerms, setAgreedTerms] = useState(false);
   const [placing, setPlacing] = useState(false);
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("COD");
+  // The Stripe confirm lives INSIDE the <Elements> provider; it registers its
+  // handler here so the shared "Place Order" button can trigger it.
+  const stripePayRef = useRef<(() => Promise<void>) | null>(null);
 
   const shippingCents = shippingCostCents(form.shippingMethod);
 
+  // Shared order payload (STRIPE variant adds paymentMethod). COD omits it → server
+  // defaults to COD, keeping the existing flow byte-for-byte.
+  const getStripeOrderInput = useCallback(
+    () => ({
+      cartItems: items.map((i) => ({
+        productId: i.productId,
+        variationId: i.variationId,
+        qty: i.qty,
+      })),
+      couponCodes: applied.map((c) => ({ code: c.code, vendorId: c.vendorId })),
+      shipping: form.shipping,
+      billing: form.billingSame ? null : form.billing,
+      billingSame: form.billingSame,
+      shippingMethod: form.shippingMethod,
+      note: note.trim() || undefined,
+      paymentMethod: "STRIPE" as const,
+    }),
+    [items, applied, form, note],
+  );
+
+  const handleStripeSuccess = useCallback(
+    (orderNumber: string) => {
+      // Card confirmed on Stripe's side — the WEBHOOK marks the order PAID. We only
+      // navigate to the same confirmation screen (which shows "confirming…" until paid).
+      clear();
+      router.push(`/order/confirmation/${orderNumber}`);
+    },
+    [clear, router],
+  );
+
   async function handlePlaceOrder() {
     if (placing || !agreedTerms) return;
+
+    // Card: hand off to the in-Elements confirm (creates the order + PaymentIntent,
+    // confirms the card). COD path below is unchanged.
+    if (paymentMethod === "STRIPE") {
+      await stripePayRef.current?.();
+      return;
+    }
+
     setPlacing(true);
     const res = await placeOrder({
       cartItems: items.map((i) => ({
@@ -106,6 +149,9 @@ export function CheckoutFlow({ defaultContact }: { defaultContact?: ContactDefau
     items.some((i) => i.sellerSlug === c.vendorSlug),
   );
   const discountCents = validApplied.reduce((s, c) => s + c.discountCents, 0);
+  // Display-only grand total for the Stripe card UI. The REAL charge amount is the
+  // server-computed total from placeOrder (Part 3) — never this client value.
+  const grandTotalCents = computeTotals(subtotalCents, { shippingCents, discountCents }).grandTotalCents;
 
   async function handleApplyCoupon(code: string) {
     if (applied.some((c) => c.code === code.trim().toUpperCase())) {
@@ -201,6 +247,17 @@ export function CheckoutFlow({ defaultContact }: { defaultContact?: ContactDefau
           )}
           {step === "payment" && (
             <PaymentStep
+              method={paymentMethod}
+              onMethodChange={setPaymentMethod}
+              amountCents={grandTotalCents}
+              stripe={{
+                getOrderInput: getStripeOrderInput,
+                onProcessingChange: setPlacing,
+                registerPay: (fn) => {
+                  stripePayRef.current = fn;
+                },
+                onSuccess: handleStripeSuccess,
+              }}
               note={note}
               onNoteChange={setNote}
               onBack={() => setStep("shipping")}

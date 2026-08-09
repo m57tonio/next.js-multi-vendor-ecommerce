@@ -428,6 +428,11 @@ model Order {
   paymentStatus PaymentStatus @default(UNPAID)
   status        OrderStatus   @default(PENDING)
 
+  // Stripe PaymentIntent id — reconciles the verified webhook back to this order.
+  // Null for COD orders. Unique so a PaymentIntent maps to exactly one order (MySQL
+  // permits multiple NULLs, so COD rows are unaffected).
+  stripePaymentIntentId String? @unique
+
   note      String?  @db.Text
   // Soft-hide from the CUSTOMER's own order list ("Hide from my list"). The order
   // record stays fully intact for sales/vendor/reporting; null = visible.
